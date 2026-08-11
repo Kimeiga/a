@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>KINO DER TOTEN — mobile web zombies</title>
+<meta name="description" content="A wave-defense zombies shooter for mobile web. One file, no dependencies, no assets, instant load.">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0c0e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#129504;</text></svg>">
+<style>
+  :root{
+    --ink:#e9eef3; --dim:#8d99a5; --line:rgba(233,238,243,.26);
+    --panel:rgba(14,17,21,.66); --gold:#ffc233; --blood:#d2273f; --tox:#7bd93a; --cyan:#3fd8e6;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#07090b;overscroll-behavior:none}
+  body{font:500 12px/1 var(--mono);color:var(--ink);
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+  #ui{position:fixed;inset:0;pointer-events:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  #pad{position:fixed;inset:0;touch-action:none}
+  .lbl{font-size:9px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+
+  /* ---------- HUD ---------- */
+  #hud{position:absolute;inset:0;opacity:0;transition:opacity .25s}
+  body.playing #hud{opacity:1}
+  #pts{position:absolute;left:14px;top:11px}
+  #pts b{font:700 27px/1 var(--mono);color:var(--gold);letter-spacing:-.02em;
+    text-shadow:0 1px 5px rgba(0,0,0,.9)}
+  #ptsFly{position:absolute;left:14px;top:41px;font:700 13px/1 var(--mono);color:var(--gold);opacity:0}
+  #perks{position:absolute;left:14px;top:60px;display:flex;gap:5px}
+  .perk{width:19px;height:24px;border-radius:3px 3px 5px 5px;border:1px solid rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:center;font:700 9px/1 var(--mono);color:#0a0c0e;
+    box-shadow:0 0 7px currentColor}
+  #rnd{position:absolute;left:14px;bottom:12px}
+  #rnd b{font:700 34px/1 var(--mono);color:var(--blood);letter-spacing:.04em;
+    text-shadow:0 0 14px rgba(210,39,63,.55),0 1px 4px #000}
+  #rnd.flash b{animation:rf 1s ease-out}
+  @keyframes rf{0%{color:#fff;text-shadow:0 0 30px #fff}100%{color:var(--blood)}}
+  #left{position:absolute;left:14px;bottom:56px;color:var(--dim);font-size:10px;line-height:1.55}
+  #left i{color:var(--ink);font-style:normal}
+  #ammo{position:absolute;text-align:center;font-variant-numeric:tabular-nums}
+  #ammo b{font:700 25px/1 var(--mono);text-shadow:0 1px 4px #000}
+  #ammo span{color:var(--dim)}
+  #ammo.low b{color:var(--blood)}
+  #wname{font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;margin-top:5px}
+  #wname.pap{color:var(--cyan)}
+  #nades{position:absolute;font-size:11px;color:var(--dim)}
+  #nades b{color:var(--ink);font-weight:700}
+  #cross{position:absolute;left:50%;top:50%;width:19px;height:19px;margin:-9.5px 0 0 -9.5px}
+  #cross i{position:absolute;background:var(--ink);box-shadow:0 0 2px rgba(0,0,0,.95)}
+  #cross i:nth-child(1){width:3px;height:3px;left:8px;top:8px;border-radius:50%}
+  #cross i:nth-child(2),#cross i:nth-child(3){width:1px;height:4px;left:9px}
+  #cross i:nth-child(2){top:0} #cross i:nth-child(3){bottom:0}
+  #cross i:nth-child(4),#cross i:nth-child(5){height:1px;width:4px;top:9px}
+  #cross i:nth-child(4){left:0} #cross i:nth-child(5){right:0}
+  #cross.aim i{background:var(--blood)}
+  #hitmark{position:absolute;left:50%;top:50%;width:32px;height:32px;margin:-16px 0 0 -16px;opacity:0}
+  #hitmark svg{width:100%;height:100%}
+  /* Zombies has no health bar: damage is a blood vignette you learn to read. */
+  #vig{position:absolute;inset:0;box-shadow:inset 0 0 0 rgba(150,8,20,0);transition:box-shadow .3s}
+  #gas{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(90,200,40,0) 30%,rgba(70,170,30,.55) 100%);
+    opacity:0;transition:opacity .4s}
+  #banner{position:absolute;left:50%;top:31%;transform:translateX(-50%);text-align:center;opacity:0;
+    transition:opacity .25s;white-space:nowrap}
+  #banner b{font:700 21px/1.25 var(--mono);letter-spacing:.1em;display:block;text-shadow:0 2px 9px #000}
+  #pwrup{position:absolute;left:50%;top:20%;transform:translateX(-50%);text-align:center;opacity:0;
+    transition:opacity .2s;white-space:nowrap}
+  #pwrup b{font:700 17px/1 var(--mono);letter-spacing:.2em;color:var(--gold);text-shadow:0 0 16px rgba(255,194,51,.7),0 2px 6px #000}
+  /* Contextual buy prompt — the whole Zombies economy is expressed through it. */
+  #use{position:absolute;left:50%;bottom:23%;transform:translateX(-50%);text-align:center;
+    opacity:0;transition:opacity .12s;white-space:nowrap;pointer-events:none}
+  #use b{font:600 13px/1.4 var(--mono);letter-spacing:.06em;display:block;text-shadow:0 2px 7px #000}
+  #use u{text-decoration:none;color:var(--gold)}
+  #use.no u{color:var(--blood)}
+  #use s{display:block;text-decoration:none;font-size:9px;letter-spacing:.18em;color:var(--dim);
+    text-transform:uppercase;margin-top:5px}
+  #diag{position:absolute;right:12px;top:52px;text-align:right;color:var(--dim);font-size:9px;line-height:1.55;opacity:.75}
+
+  /* ---------- touch controls ---------- */
+  .ctl{position:absolute;border:1px solid var(--line);border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    background:var(--panel);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+  .ctl.on{background:rgba(255,194,51,.24);border-color:var(--gold)}
+  .ctl.cool{opacity:.3}
+  .ctl.hidden{display:none}
+  .ctl svg{width:20px;height:20px;color:var(--ink);opacity:.93}
+  #bFireR svg{width:26px;height:26px}
+  #bUse{border-color:var(--gold);background:rgba(255,194,51,.16)}
+  #bUse svg{color:var(--gold)}
+  .ctl .tag{position:absolute;bottom:-13px;font-size:9px;color:var(--gold);white-space:nowrap}
+  #stick{position:absolute;width:112px;height:112px;border:1px solid var(--line);border-radius:50%;opacity:0;transition:opacity .1s}
+  #stick i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;
+    border:1px solid rgba(233,238,243,.55);border-radius:50%;background:rgba(233,238,243,.1)}
+  #stick.run{border-color:var(--gold)}
+
+  /* ---------- overlays ---------- */
+  .sheet{position:absolute;inset:0;background:rgba(6,8,10,.88);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+    display:flex;align-items:center;justify-content:center;pointer-events:auto}
+  .sheet.hide{display:none}
+  .card{width:min(560px,88vw);max-height:88vh;overflow:auto;padding:20px 22px;border:1px solid var(--line);
+    background:rgba(12,15,19,.92)}
+  .card h1{font:700 15px/1 var(--mono);letter-spacing:.3em;text-transform:uppercase;margin-bottom:4px}
+  .card h2{font:700 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;margin:16px 0 2px;color:var(--gold)}
+  .card p{font-size:11px;line-height:1.7;color:var(--dim);margin:9px 0}
+  .card p b{color:var(--ink);font-weight:600}
+  .card p u{text-decoration:none;color:var(--gold)}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 0;border-top:1px solid rgba(233,238,243,.12)}
+  .row label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .row .v{font-size:11px;min-width:82px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:126px;height:20px;background:transparent}
+  input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--line)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:var(--gold)}
+  input[type=range]::-moz-range-track{height:1px;background:var(--line)}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--gold)}
+  button{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink);
+    background:transparent;border:1px solid var(--line);padding:9px 14px;cursor:pointer}
+  button.pri{background:var(--gold);border-color:var(--gold);color:#0a0c0e;width:100%;padding:14px;margin-top:15px}
+  .seg{display:flex;border:1px solid var(--line)}
+  .seg button{border:0;border-left:1px solid var(--line);padding:8px 9px;letter-spacing:.06em;font-size:10px}
+  .seg button:first-child{border-left:0}
+  .seg button.sel{background:var(--gold);color:#0a0c0e}
+  #gear{position:absolute;right:10px;top:10px;width:34px;height:34px;pointer-events:auto;
+    border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--dim);font-size:15px;
+    display:flex;align-items:center;justify-content:center}
+  body.desk #stick,body.desk .ctl,body.desk #gear{display:none}
+  .deskonly{display:none}
+  body.desk .row.deskonly{display:flex}
+  body.desk p.deskonly,body.desk div.deskonly{display:block}
+  body.desk .touchonly{display:none}
+  .kbd{display:inline-block;min-width:17px;padding:2px 4px;margin-right:4px;text-align:center;
+    border:1px solid var(--line);border-radius:3px;font-size:10px;color:var(--ink)}
+  #keyhud{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+    display:flex;gap:15px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  #keyhud b{color:var(--ink);font-weight:600}
+
+  /* ---------- attract mode ---------- */
+  #title{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;pointer-events:auto;background:radial-gradient(ellipse at center,rgba(6,8,10,0) 25%,rgba(6,8,10,.82) 100%)}
+  #title.hide{display:none}
+  #title h1{font:700 clamp(26px,8.5vw,58px)/1 var(--mono);letter-spacing:.22em;margin-left:.22em;
+    color:var(--ink);text-shadow:0 0 34px rgba(210,39,63,.55),0 3px 14px #000}
+  #title h1 em{font-style:normal;color:var(--blood)}
+  #title .sub{margin-top:11px;font-size:10px;letter-spacing:.4em;color:var(--dim);text-transform:uppercase}
+  #title .tap{margin-top:34px;font:600 13px/1 var(--mono);letter-spacing:.28em;text-transform:uppercase;
+    color:var(--gold);animation:pulse 1.9s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
+  #title .hint{margin-top:14px;font-size:10px;letter-spacing:.1em;color:var(--dim);max-width:min(430px,84vw);line-height:1.75}
+  #title .how{position:absolute;bottom:14px;font-size:9px;letter-spacing:.16em;color:rgba(141,153,165,.6);text-transform:uppercase}
+  #over .card{text-align:center}
+  #over b.big{font:700 46px/1 var(--mono);color:var(--blood);display:block;margin:6px 0 2px}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="pad"></div>
+
+<div id="ui">
+  <div id="hud">
+    <div id="vig"></div>
+    <div id="gas"></div>
+    <div id="pts"><b id="ptsN">500</b><div class="lbl">points</div></div>
+    <div id="ptsFly"></div>
+    <div id="perks"></div>
+    <div id="rnd"><b id="rndN">1</b><div class="lbl">round</div></div>
+    <div id="left"></div>
+    <div id="diag"></div>
+    <div id="cross"><i></i><i></i><i></i><i></i><i></i></div>
+    <div id="hitmark"><svg viewBox="0 0 32 32" stroke="#ffc233" stroke-width="2.2" fill="none">
+      <path d="M5 5l6 6M27 5l-6 6M5 27l6-6M27 27l-6-6"/></svg></div>
+    <div id="banner"><b id="bt"></b><div class="lbl" id="bs"></div></div>
+    <div id="pwrup"><b id="pwt"></b></div>
+    <div id="use"><b id="useT"></b><s id="useS"></s></div>
+
+    <div id="stick"><i></i></div>
+    <div class="ctl" id="fireL"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3"/></svg></div>
+    <div class="ctl" id="bJump"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4.6M7.6 9L12 4.6 16.4 9"/><path d="M4.6 19.6h14.8"/></svg></div>
+    <div class="ctl" id="bReload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 4.5 21 10 15.5 10"/><path d="M18.8 14.5A7.6 7.6 0 1 1 16.9 6L21 10"/></svg></div>
+    <div class="ctl" id="bSwap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3.2-3.2M20 16H7l3.2 3.2"/></svg></div>
+    <div class="ctl" id="bFireR"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3"/></svg></div>
+    <div class="ctl" id="bKnife"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5l7.5-7.5M19.5 3.6l-7.4 8.4-2.6-2.6 8-7.2z"/><path d="M8 16l-3.5 3.5"/></svg></div>
+    <div class="ctl" id="bNade"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14.4" r="6"/><path d="M9.8 8.3l1.3-2.2h3l1.2 2.1M14 5.4l3-1.4"/></svg><div class="tag" id="nadeN"></div></div>
+    <div class="ctl hidden" id="bUse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4v9.2M8.4 9l3.6 3.6L15.6 9"/><path d="M4.6 15v3.6a1.8 1.8 0 0 0 1.8 1.8h11.2a1.8 1.8 0 0 0 1.8-1.8V15"/></svg></div>
+    <div id="ammo"><b id="mag">8</b><span id="res">/32</span><div id="wname">M1911</div></div>
+    <div id="nades"></div>
+    <div id="keyhud" class="deskonly"></div>
+    <button id="gear">≡</button>
+  </div>
+</div>
+
+<div id="title">
+  <h1>KINO <em>DER TOTEN</em></h1>
+  <div class="sub">theater of the dead</div>
+  <div class="tap touchonly">tap to drop in</div>
+  <div class="tap deskonly">click to drop in</div>
+  <div class="hint">Survive the rounds. Buy doors to open the theater, hunt the Mystery Box, turn on the power, and get to the Pack&#8209;A&#8209;Punch before they get to you.</div>
+  <div class="how"><span class="touchonly">landscape &middot; add to home screen for fullscreen</span><span class="deskonly">wasd &middot; mouse &middot; f to buy &middot; esc to pause</span></div>
+</div>
+
+<div class="sheet hide" id="pause">
+  <div class="card">
+    <h1>Paused</h1>
+    <div class="lbl">cursor released</div>
+    <button class="pri" id="resume">Click to resume</button>
+    <button id="popts" style="width:100%;margin-top:8px">Settings</button>
+  </div>
+</div>
+
+<div class="sheet hide" id="over">
+  <div class="card">
+    <h1>You died</h1>
+    <b class="big" id="ovR">1</b>
+    <div class="lbl">rounds survived</div>
+    <p id="ovS"></p>
+    <button class="pri" id="again">Try again</button>
+  </div>
+</div>
+
+<div class="sheet hide" id="help">
+  <div class="card">
+    <h1>How it works</h1>
+    <h2>Points are everything</h2>
+    <p>Hits pay <u>10</u>, body kills <u>60</u>, headshots <u>100</u>, a knife kill <u>130</u>. Points buy doors, weapons, perks and Pack&#8209;A&#8209;Punch. Shooting a zombie a few times before killing it is worth more than one-shotting it &mdash; that is the whole economy.</p>
+    <h2>The loop</h2>
+    <p>Open doors to reach the theater, find the <b>power switch</b> in the power room to wake the perk machines and the teleporter, then link the mainframe in the lobby and teleport from the stage to <b>Pack&#8209;A&#8209;Punch</b> your weapon.</p>
+    <h2>Train them</h2>
+    <p>They walk straight at you and they never stop. The theater floor is big enough to run a circle and gather the whole round into one train behind you. That is the skill.</p>
+    <h2>Watch for</h2>
+    <p><b>Crawlers</b> burst into Nova&#8209;6 gas. <b>Hounds</b> arrive in whole rounds and are faster than you. <b>Screechers</b> fly, so the ground is not where you should be looking. <b>Spitters</b> shoot you from across the room. A <b>Panzer</b> shows up when it feels like it.</p>
+    <button class="pri" id="helpClose">Back</button>
+  </div>
+</div>
+
+<div class="sheet hide" id="opts">
+  <div class="card">
+    <h1>Settings</h1>
+    <div class="lbl">tuning is in-memory only</div>
+    <div class="row"><label>Trigger</label><div class="seg" id="segFire">
+      <button data-v="auto">Auto</button><button data-v="semi">Semi</button><button data-v="target">On target</button></div></div>
+    <div class="row touchonly"><label>Look speed</label><input type="range" id="sSens" min="8" max="60" step="1"><div class="v" id="vSens"></div></div>
+    <div class="row deskonly"><label>Mouse sensitivity</label><input type="range" id="sMs" min="10" max="200" step="5"><div class="v" id="vMs"></div></div>
+    <div class="row"><label>Aim magnetism</label><input type="range" id="sAssist" min="0" max="100" step="5"><div class="v" id="vAssist"></div></div>
+    <div class="row"><label>Field of view</label><input type="range" id="sFov" min="65" max="105" step="1"><div class="v" id="vFov"></div></div>
+    <div class="row"><label>Graphics</label><div class="seg" id="segGfx">
+      <button data-v="0">Low</button><button data-v="1">Medium</button><button data-v="2">High</button></div></div>
+    <p style="margin-top:2px">Medium adds cast shadows from the room light, High adds the wet lobby marble. Both cost fill rate, which is what a phone runs out of first.</p>
+    <div class="row"><label>Resolution</label><div class="seg" id="segRes">
+      <button data-v="0">Auto</button><button data-v="0.7">70%</button><button data-v="1">100%</button><button data-v="2">Native</button></div></div>
+    <p style="margin-top:2px">Auto watches the frame time and moves the render scale to hold the rate. It is the setting to leave alone.</p>
+    <div class="row touchonly"><label>Mirror layout</label><div class="seg" id="segMir">
+      <button data-v="0">Right</button><button data-v="1">Left</button></div></div>
+    <div class="row touchonly"><label>Auto sprint</label><div class="seg" id="segRun">
+      <button data-v="1">On</button><button data-v="0">Off</button></div></div>
+    <button id="helpBtn" style="width:100%;margin-top:14px">How it works</button>
+    <button class="pri" id="close">Back to the fight</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/*__GAME__*/
+</script>
+</body>
+</html>
