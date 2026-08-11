@@ -1,3 +1,4 @@
 node_modules/
 package-lock.json
 test/bundle.js
+test/bundle.min.js

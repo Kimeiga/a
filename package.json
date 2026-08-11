@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "gl": "^8.1.6"
+  },
+  "devDependencies": {
+    "terser": "^5.50.0"
   }
 }

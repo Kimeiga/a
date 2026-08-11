@@ -80,7 +80,7 @@ export function boot({ w = 640, h = 360, dpr = 1.5, seed } = {}) {
   sandbox.globalThis = sandbox;
 
   const ctx = vm.createContext(sandbox);
-  const src = readFileSync(join(here, "bundle.js"), "utf8");
+  const src = readFileSync(join(here, process.env.MINIFIED ? "bundle.min.js" : "bundle.js"), "utf8");
   vm.runInContext('"use strict";\n' + src, ctx, { filename: "bundle.js" });
 
   const K = sandbox.__kino;

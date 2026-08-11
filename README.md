@@ -61,11 +61,18 @@ including the Ray Gun and the Thundergun.
 ## Build
 
 ```bash
-node build.mjs      # concatenates src/*.js into index.html
+node build.mjs          # -> index.html          198 KB raw, 68 KB gzipped
+node build.mjs --min    # -> dist/index.html     117 KB raw, 43 KB gzipped
 ```
 
-There is no bundler and no minifier. The build exists so a 4,000-line program
-can live in editable pieces while still shipping as one request.
+The build exists so a 4,000-line program can live in editable pieces while
+still shipping as one request. `index.html` is the readable artefact — the
+comments are most of its bulk and they are the point. `dist/index.html` is the
+same program with the prose taken out, and it is what gets deployed.
+
+Both are tested: `MINIFIED=1` runs either suite against the minified bundle,
+and the run is identical round for round, because the simulation is seeded and
+fixed-step.
 
 ## Tests
 
