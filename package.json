@@ -1,8 +1,14 @@
 {
-  "dependencies": {
-    "gl": "^8.1.6"
+  "name": "kino-der-toten",
+  "private": true,
+  "type": "module",
+  "description": "A wave-defense zombies shooter for mobile web. One file, no dependencies.",
+  "scripts": {
+    "build": "node build.mjs --min",
+    "test": "xvfb-run -a --server-args=\"-screen 0 640x480x24\" node test/smoke.mjs && xvfb-run -a --server-args=\"-screen 0 640x480x24\" node test/play.mjs"
   },
   "devDependencies": {
+    "gl": "^8.1.6",
     "terser": "^5.50.0"
   }
 }

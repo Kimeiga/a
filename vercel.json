@@ -1,9 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'nothing to install'",
+  "buildCommand": "echo 'nothing to build: index.html is committed'",
+  "outputDirectory": ".",
   "cleanUrls": true,
   "headers": [
     {
-      "source": "/index.html",
+      "source": "/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
       ]

@@ -99,3 +99,14 @@ render tests and scene-luminance statistics, because "it looks flat" and "it
 looks broken" have the same symptom and only a number tells them apart.
 
 Both suites found real bugs — see the commit history.
+
+## Deploying
+
+The repository is a static site: `index.html` sits at the root and there is
+nothing to install or build, so importing it into Vercel and pressing deploy
+is the whole procedure — `vercel.json` already pins the framework to none and
+turns the install and build steps into no-ops.
+
+It is also published straight from this repository by GitHub Pages, from the
+`gh-pages` branch, which carries `dist/index.html` and a `.nojekyll` marker so
+Pages serves the file rather than trying to render it.
